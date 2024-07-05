@@ -5,7 +5,9 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 from login.views import MyTokenObtainPairSerializer
-# helo
+from django.contrib.auth.models import User
+from .models import *
+
 class MainUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -58,3 +60,22 @@ class LoginSerializer(serializers.Serializer):
                 raise serializers.ValidationError('Invalid credentials')
         else:
             raise serializers.ValidationError('Must include "username" and "password"')
+        
+# serializers.py
+from rest_framework import serializers
+
+class ChannelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Channel
+        fields = '__all__'
+
+class ChannelMembergetSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    class Meta:
+        model = ChannelMember
+        fields = ['id', 'username', 'joined_at'] 
+               
+class ChannelMemberSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChannelMember
+        fields = '__all__'

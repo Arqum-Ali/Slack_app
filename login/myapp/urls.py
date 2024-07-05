@@ -26,9 +26,13 @@ from django.conf import settings
 from django.conf.urls.static import static
 from .views import *
 urlpatterns = [
-
+    path('channels/add-member/', AddMemberView.as_view(), name='add-member'),
+    path('channels/create/', ChannelCreateView.as_view(), name='channel-create'),
     path('send_email/', sendmail, name='send_email'),
     path('add_user/', adduser, name='add_user'),
     path('login/', LoginView.as_view(), name='login'),
+    path('channels/<int:channel_id>/members/', ChannelMemberListView.as_view(), name='channel-members-list'),
+    path('channels/<int:channel_id>/delete/', ChannelDeleteView.as_view(), name='channel-delete'),
+    path('channels/<int:channel_id>/update/', ChannelUpdateView.as_view(), name='channel-update'),
 
 ]

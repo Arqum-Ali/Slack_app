@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from .models import *
 from datetime import datetime, timedelta
 from django.contrib.auth.hashers import make_password
-from .serializers import EmailSerializer,MainUserSerializer
+from .serializers import *
 from django.contrib.auth.models import User
 
 @api_view(['POST','GET'])
@@ -92,3 +92,85 @@ def adduser(request):
         serializer.save()
         print("password", password)
         return Response({'status': 200, 'payload': serializer.data, 'message': 'user saved successfully'})
+
+
+
+
+from rest_framework import generics, status
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from .models import Channel, ChannelMember
+from .serializers import ChannelSerializer, ChannelMemberSerializer
+
+
+
+class ChannelCreateView(generics.CreateAPIView):
+    queryset = Channel.objects.all()
+    serializer_class = ChannelSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        channel = serializer.save()
+        ChannelMember.objects.create(user=self.request.user, channel=channel)
+
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        return Response({
+            'channel': response.data,
+            'member': ChannelMemberSerializer(ChannelMember.objects.get(user=request.user, channel_id=response.data['id'])).data
+        }, status=status.HTTP_201_CREATED)
+    
+
+
+
+
+class AddMemberView(generics.CreateAPIView):
+    queryset = ChannelMember.objects.all()
+    serializer_class = ChannelMemberSerializer
+
+    def create(self, request, *args, **kwargs):
+        user_id = request.data.get('user_id')
+        channel_id = request.data.get('channel_id')
+        member, created = ChannelMember.objects.get_or_create(user_id=user_id, channel_id=channel_id)
+        if created:
+            return Response(self.get_serializer(member).data, status=status.HTTP_201_CREATED)
+        return Response({'detail': 'Member already in channel'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+class ChannelMemberListView(generics.ListAPIView):
+    serializer_class = ChannelMembergetSerializer
+
+    def get_queryset(self):
+        channel_id = self.kwargs['channel_id']  # Assuming you pass channel_id in URL params or query params
+        return ChannelMember.objects.filter(channel_id=channel_id)
+    
+
+
+
+class ChannelDeleteView(generics.DestroyAPIView):
+    queryset = Channel.objects.all()
+    lookup_url_kwarg = 'channel_id'  # URL keyword argument for channel ID
+    lookup_field = 'id'  # Field to use for looking up the channel
+
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return Response({"message": "Channel deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+    
+
+class ChannelUpdateView(generics.UpdateAPIView):
+    queryset = Channel.objects.all()
+    serializer_class = ChannelSerializer
+    lookup_url_kwarg = 'channel_id'  # URL keyword argument for channel ID
+    lookup_field = 'id'  # Field to use for looking up the channel
+
+    def put(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
