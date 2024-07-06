@@ -174,3 +174,40 @@ class ChannelUpdateView(generics.UpdateAPIView):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+
+
+
+
+@api_view(['POST','GET'])
+def invite_user(request):
+    if request.method == 'POST':
+        user=request.user
+        # Handle POST request logic here
+        data = request.data
+        serializer = EmailSerializer(data=data)
+        
+        if serializer.is_valid(raise_exception=False):
+            email_of_user = serializer.validated_data.get('email')
+            
+            # Check if the email already exists in the CustomUser model
+            if User.objects.filter(email=email_of_user).exists():
+                return Response({'status': 400, 'message': 'The user already have an acount '})
+            else:
+                # Generate a token with the email embedded
+                token = generate_token(email_of_user)
+
+                # Send the email with the token embedded
+                send_email(email_of_user, token,user)
+
+                return Response({'status': 200, 'payload': serializer.data, 'message': 'The email has been sent with token'})
+        else:
+            return Response({'status': 403, 'error': serializer.errors, 'message': 'Something went wrong in sending email'})
+def send_email(email, token,user):
+    subject = f'You are invited by the {user} in the slack'
+    verification_link = f'http://localhost:3000/register_password/{token}'
+    message = f'Click on the link to verify: {verification_link}'
+    from_email = settings.EMAIL_HOST_USER
+    recipient_list = [email]
+    send_mail(subject, message, from_email, recipient_list)
+    print("Email sent to:", email)
+
