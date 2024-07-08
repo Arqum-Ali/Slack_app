@@ -28,12 +28,21 @@ from .views import *
 urlpatterns = [
     path('channels/add-member/', AddMemberView.as_view(), name='add-member'),
     path('channels/create/', ChannelCreateView.as_view(), name='channel-create'),
-    path('send_email/', sendmail, name='send_email'),
-    path('add_user/', adduser, name='add_user'),
-    path('login/', LoginView.as_view(), name='login'),
     path('channels/<int:channel_id>/members/', ChannelMemberListView.as_view(), name='channel-members-list'),
     path('channels/<int:channel_id>/delete/', ChannelDeleteView.as_view(), name='channel-delete'),
     path('channels/<int:channel_id>/update/', ChannelUpdateView.as_view(), name='channel-update'),
     path('invite_user/', invite_user, name='invite_user'),
 
+
+
+    path('send_email/', sendmail, name='send_email'),
+    path('add_user/', adduser, name='add_user'),
+    path('login/', LoginView.as_view(), name='login'),
+
 ]
+
+# # Import the websocket url patterns
+# from myapp.routing import websocket_urlpatterns
+
+# # Extend the urlpatterns list with the websocket patterns
+# urlpatterns += websocket_urlpatterns
