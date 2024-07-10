@@ -8,7 +8,8 @@ from datetime import datetime, timedelta
 from django.contrib.auth.hashers import make_password
 from .serializers import *
 from django.contrib.auth.models import User
-
+from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponseForbidden
 @api_view(['POST','GET'])
 def sendmail(request):
     if request.method == 'POST':
@@ -211,3 +212,19 @@ def send_email(email, token,user):
     send_mail(subject, message, from_email, recipient_list)
     print("Email sent to:", email)
 
+
+def chat_view(request, groupkaname):
+    channel = get_object_or_404(Channel, name=groupkaname)
+    print(channel)
+    # Check if the user is a member of the channel
+    if not ChannelMember.objects.filter(user=request.user, channel=channel).exists():
+        return HttpResponseForbidden("You are not a member of this channel.")
+    
+    return render(request, 'chat/chat.html', {'channel': channel})
+
+
+from rest_framework import viewsets
+
+class MessageViewSet(viewsets.ModelViewSet):
+    queryset = Message.objects.all()
+    serializer_class = MessageSerializer

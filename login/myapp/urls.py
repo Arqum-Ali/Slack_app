@@ -32,6 +32,7 @@ urlpatterns = [
     path('channels/<int:channel_id>/delete/', ChannelDeleteView.as_view(), name='channel-delete'),
     path('channels/<int:channel_id>/update/', ChannelUpdateView.as_view(), name='channel-update'),
     path('invite_user/', invite_user, name='invite_user'),
+    path('chat/<str:groupkaname>/', chat_view, name='chat_view'),
 
 
 

@@ -79,3 +79,23 @@ class ChannelMemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChannelMember
         fields = '__all__'
+
+
+
+class MessagegetSerializer(serializers.ModelSerializer):
+    sender = MainUserSerializer()
+    channel = ChannelSerializer()
+
+    class Meta:
+        model = Message
+        fields = ['id', 'channel', 'sender', 'message_value', 'message_receiver', 'message_time', 'is_read']
+
+
+        
+class MessageSerializer(serializers.ModelSerializer):
+    # sender = MainUserSerializer()
+    # channel = ChannelSerializer()
+
+    class Meta:
+        model = Message
+        fields = ['id', 'channel', 'sender', 'message_value', 'message_receiver', 'message_time', 'is_read']

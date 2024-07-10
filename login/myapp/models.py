@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 # class CustomUser(AbstractUser):
 #     # Add any additional fields here
@@ -14,6 +15,19 @@ class Channel(models.Model):
 
     def __str__(self):
         return self.name
+
+class Message(models.Model):
+    Channel_Id=models.ForeignKey(Channel,related_name='channel',on_delete=models.CASCADE,null=True)
+    message_value=models.CharField(max_length=50,null=True)
+    message_sender=models.CharField(max_length=50,null=True)
+    message_receiver=models.CharField(max_length=50,null=True)
+    message_time = models.DateTimeField(default=timezone.now)
+    is_read = models.BooleanField(default=False)  # Add this field to track message read status
+    # group_id=models.CharField(max_length=50,null=True)
+    def __str__(self) -> str:
+        return self.message_receiver
+    
+    
 
 
 
