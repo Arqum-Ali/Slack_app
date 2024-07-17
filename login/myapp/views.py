@@ -226,5 +226,5 @@ def chat_view(request, groupkaname):
 from rest_framework import viewsets
 
 class MessageViewSet(viewsets.ModelViewSet):
-    queryset = Message.objects.all()
+    queryset = Channel_Message.objects.all()
     serializer_class = MessageSerializer

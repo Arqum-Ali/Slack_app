@@ -17,6 +17,7 @@ websocket_urlpatterns = [
     path('ws/sc/hello/', consumer.asyncEchoConsumer.as_asgi()),
     # path('ws/sc/<str:groupkaname>/', consumer.ChatConsumer.as_asgi()),
 
-    path('ws/sc/<str:groupkaname>/', consumer.EchoConsumer.as_asgi()),
+    path('ws/sc/<str:group_id>/', consumer.EchoConsumer.as_asgi()),
+    path('ws/sr/<str:group_id>/', consumer.ChatConsumer.as_asgi()),
 
 ]

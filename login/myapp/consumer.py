@@ -56,109 +56,120 @@ from channels.generic.websocket import WebsocketConsumer
 from asgiref.sync import async_to_sync
 import json
 from django.contrib.auth.models import User
-from .models import Channel, ChannelMember, Message
-class ChatConsumer(WebsocketConsumer):
-    def connect(self):
-        self.group_name = self.scope['url_route']['kwargs']['groupkaname']
-        self.channel_group_name = f"group_{self.group_name}"
-
-        # Retrieve the user from the scope
-        user = 1
-        print(user)
-        # Check if the user is authenticated
-        # if not user.is_authenticated:
-        #     self.close(code=4000000000)
-        #     return
-        # user = User.objects.get(id=user.id)
-
+from .models import *
+from channels.generic.websocket import AsyncWebsocketConsumer
+import json
+from channels.db import database_sync_to_async
+from django.contrib.auth.models import User
+from rest_framework_simplejwt.tokens import AccessToken
+from channels.db import database_sync_to_async
+from django.contrib.auth import get_user_model
+class ChatConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        # print("71")
+        self.group_id = self.scope['url_route']['kwargs']['group_id']
+        print(self.group_id)
+        self.channel_group_id = f"group_{self.group_id}"
+        print(self.channel_group_id)
+        token = self.scope['query_string'].decode().split('=')[1]
+        access_token = AccessToken(token)
+        user_id = access_token['user_id']
+        # self.user = await self.get_user(user_id)
+        self.user_id=user_id
+        print("self.user",self.user_id)
+        # print("self.user", self.user.id)
+        # print(user_id, "user_id")
+        if not self.user_id:
+            print("error in 76")
+            await self.close(code=4000)
+            return "error is occur due to the self.user"
         try:
-            channel = Channel.objects.get(name=self.group_name)
+            channel = await self.get_channel(self.group_id)
 
-            # Check if the user is a member of the channel
-            if ChannelMember.objects.filter(user=user, channel=channel).exists():
-                async_to_sync(self.channel_layer.group_add)(
-                    self.channel_group_name,
+            if await self.is_channel_member(self.user_id, self.group_id):
+                print("helo i am arqumS",self.is_channel_member(self.user_id, channel))
+                await self.channel_layer.group_add(
+                    self.channel_group_id,
                     self.channel_name
                 )
-                self.accept()
+                await self.accept()
             else:
-                # Reject the connection if the user is not a member
-                self.close(code=403)
+                print("error in 92")
+                await self.close(code=403)
+                return "error because the user is not the member of channel"
         except Channel.DoesNotExist:
-            self.close(code=403)
+            print("error in 95")
+            await self.close(code=403, reason="Channel is not present")
+            return "channel is not preset"
 
-    def disconnect(self, close_code):
-        async_to_sync(self.channel_layer.group_discard)(
-            self.channel_group_name,
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.channel_group_id,
             self.channel_name
         )
 
-    def receive(self, text_data):
-        data = json.loads(text_data)
-        message_value = data['message']
-        sender_username = data['sender']
-
+    async def receive(self, text_data):
         try:
-            sender = User.objects.get(username=sender_username)
-            channel = Channel.objects.get(name=self.group_name)
+            text_data_json = json.loads(text_data)
+            message = text_data_json['message'].strip()
+            print(message, "message")
+        except json.JSONDecodeError:
+            await self.send(text_data=json.dumps({
+                'error': 'Invalid JSON'
+            }))
+            return
+        except KeyError:
+            print("131")
+            await self.send(text_data=json.dumps({
+                'error': 'Message field is required'
+            }))
+            return
+        print("135")
+        print("self.group_name", self.group_id)
+        print("message", message)
 
-            # Ensure the sender is a member of the channel
-            if ChannelMember.objects.filter(user=sender, channel=channel).exists():
-                chat = Message(
-                    channel=channel,
-                    sender=sender,
-                    message_value=message_value
-                )
-                chat.save()
+        await self.channel_layer.group_send(
+            self.channel_group_id,  # Use self.channel_group_name
+            {
+                'type': 'chat_message',  # Correct the message type
+                'message': message
+            }
+        )
+        print("147")
+        await self.save_message(self.group_id, self.user_id, message)
 
-                # Send the message to the group
-                async_to_sync(self.channel_layer.group_send)(
-                    self.channel_group_name,
-                    {
-                        'type': 'chat_message',
-                        'message': message_value,
-                        'sender': sender_username
-                    }
-                )
-            else:
-                self.send(text_data=json.dumps({'error': 'Sender is not a member of this channel'}))
 
-        except User.DoesNotExist:
-            self.send(text_data=json.dumps({'error': 'Sender does not exist'}))
-        except Channel.DoesNotExist:
-            self.send(text_data=json.dumps({'error': 'Channel does not exist'}))
-
-    def chat_message(self, event):
+    async def chat_message(self, event):
+        print("151")
         message = event['message']
-        sender = event['sender']
-
-        self.send(text_data=json.dumps({
-            'message': message,
-            'sender': sender
+        print("152")
+        await self.send(text_data=json.dumps({
+            'message': message
         }))
 
-        # helo=event['text']
-        # print("my name is arqum ",helo)
-        # if helo=='arqum':
-        #     for i in range(10):
-        #         self.send({'type':'websocket.send',
-        #                 # 'text':str(i)
-        #                 'text':json.dumps(i)
-        #                 # use to convert the python to string
-        #                 }
-        #                     )
-        #         sleep(0.7)
-        #     # self.send({'type':'websocket.send',
-        #     #             'text':helo
-        #     # })
+    @database_sync_to_async
+    def get_user(self, user_id):
+        return User.objects.get(id=user_id) if user_id else None
 
-        # else:
-        #     self.send({'type':'websocket.send',
-        #                 'text':json.dumps('Please enter correct name')
-        #                 }
-        #                 )
-            
-  
+    @database_sync_to_async
+    def get_user_by_username(self, username):
+        return User.objects.get(username=username) if username else None
+
+    @database_sync_to_async
+    def get_channel(self, channel_id):
+        return Channel.objects.get(id=channel_id)
+
+    @database_sync_to_async
+    def is_channel_member(self, user_id, channel_id):
+        return ChannelMember.objects.filter(user_id=user_id, channel_id=channel_id).exists()
+
+    @database_sync_to_async
+    def save_message(self, channel_id, sender_id, message_value):
+        print("167----------------")
+        print("channels",channel_id,"sender",sender_id,"message_value",message_value)
+        chat = Channel_Message(Channel_Id_id=channel_id, message_sender_id=sender_id, message_value=message_value)
+        chat.save()
+        return chat
 
 def websocket_disconnect(self, event):
     print("in disconnect")

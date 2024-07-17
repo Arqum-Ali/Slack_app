@@ -87,7 +87,7 @@ class MessagegetSerializer(serializers.ModelSerializer):
     channel = ChannelSerializer()
 
     class Meta:
-        model = Message
+        model = Channel_Message
         fields = ['id', 'channel', 'sender', 'message_value', 'message_receiver', 'message_time', 'is_read']
 
 
@@ -97,5 +97,5 @@ class MessageSerializer(serializers.ModelSerializer):
     # channel = ChannelSerializer()
 
     class Meta:
-        model = Message
+        model = Channel_Message
         fields = ['id', 'channel', 'sender', 'message_value', 'message_receiver', 'message_time', 'is_read']
